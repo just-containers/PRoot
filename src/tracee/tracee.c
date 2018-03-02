@@ -31,6 +31,11 @@
 #include <signal.h>     /* kill(2), SIGKILL, */
 #include <sys/ptrace.h> /* ptrace(2), PTRACE_*, */
 #include <errno.h>      /* E*, */
+#include <linux/wait.h> /* __WALL, __WCLONE */
+
+#if !defined(__W_STOPCODE)
+#define __W_STOPCODE(sig) ((sig) << 8 | 0x7f)
+#endif
 
 #include "tracee/tracee.h"
 #include "tracee/reg.h"

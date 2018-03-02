@@ -26,6 +26,7 @@
 #include <stdbool.h>    /* bool, true, false, */
 #include <signal.h>     /* SIG*, */
 #include <talloc.h>     /* talloc*, */
+#include <linux/wait.h> /* __WALL, __WCLONE */
 
 #include "ptrace/wait.h"
 #include "ptrace/ptrace.h"

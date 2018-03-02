@@ -28,6 +28,7 @@
 #include <sys/uio.h>    /* struct iovec, */
 #include <sys/param.h>  /* MIN(), MAX(), */
 #include <string.h>     /* memcpy(3), */
+#include <linux/wait.h> /* __WALL, __WCLONE */
 
 #include "ptrace/ptrace.h"
 #include "ptrace/user.h"
