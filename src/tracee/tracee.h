@@ -28,6 +28,9 @@
 #include <stdbool.h>   /* bool,  */
 #include <sys/queue.h> /* LIST_*, */
 #include <sys/ptrace.h>/* enum __ptrace_request */
+#if !defined(__GLIBC__)
+#include "ptrace_compat.h"
+#endif
 #include <talloc.h>    /* talloc_*, */
 
 #include "arch.h" /* word_t, user_regs_struct, */
