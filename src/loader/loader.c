@@ -39,6 +39,8 @@
 #    include "loader/assembly-x86_64.h"
 #elif defined(ARCH_ARM_EABI)
 #    include "loader/assembly-arm.h"
+#elif defined(ARCH_ARM64)
+#    include "loader/assembly-arm64.h"
 #elif defined(ARCH_X86)
 #    include "loader/assembly-x86.h"
 #else
@@ -134,7 +136,11 @@ void _start(void *cursor)
 			/* Fall through.  */
 
 		case LOAD_ACTION_OPEN:
+#ifdef OPENAT
+			fd = SYSCALL(OPENAT, 4, AT_FDCWD, stmt->open.string_address, O_RDONLY, 0);
+#else
 			fd = SYSCALL(OPEN, 3, stmt->open.string_address, O_RDONLY, 0);
+#endif
 			if (unlikely((int) fd < 0))
 				FATAL();
 

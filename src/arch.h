@@ -125,6 +125,9 @@ typedef unsigned char byte_t;
     #define OFFSETOF_STAT_UID_32 0
     #define OFFSETOF_STAT_GID_32 0
 
+    #define EXEC_PIC_ADDRESS   0x500000000000
+    #define INTERP_PIC_ADDRESS 0x6f0000000000
+
 #elif defined(ARCH_X86)
 
     #define SYSNUMS_HEADER1 "syscall/sysnums-i386.h"
