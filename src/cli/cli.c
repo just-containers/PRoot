@@ -30,7 +30,9 @@
 #include <sys/types.h>     /* getpid(2),  */
 #include <unistd.h>        /* getpid(2),  */
 #include <errno.h>         /* errno(3), */
+#if defined(__GLIBC__)
 #include <execinfo.h>      /* backtrace_symbols(3), */
+#endif
 #include <limits.h>        /* INT_MAX, */
 
 #include "cli/cli.h"
@@ -555,6 +557,7 @@ static int indent_level = 0;
 void __cyg_profile_func_enter(void *this_function, void *call_site) DONT_INSTRUMENT;
 void __cyg_profile_func_enter(void *this_function, void *call_site)
 {
+#if defined(__GLIBC__)
 	void *const pointers[] = { this_function, call_site };
 	char **symbols = NULL;
 
@@ -567,6 +570,7 @@ void __cyg_profile_func_enter(void *this_function, void *call_site)
 end:
 	if (symbols != NULL)
 		free(symbols);
+#endif /* defined(__GLIBC__) */
 
 	if (indent_level < INT_MAX)
 		indent_level++;
