@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -e
+
+TARGET=$1
+
+if [[ -z "${TARGET}" ]] ; then
+    printf "Usage: $0 target\n"
+    exit 1
+fi
+
+HOSTCC=$CC
+
+if [[ -z "$HOSTCC" ]] ; then
+    HOSTCC="cc"
+fi
+
+unset CC CXX LINK AR NM READELF RANLIB
+
+MUSL_CROSS_MAKE_RELEASE=8
+MUSL_CROSS_MAKE_SRC="https://github.com/just-containers/musl-cross-make/releases/download/v${MUSL_CROSS_MAKE_RELEASE}"
+
+versions__talloc=2.1.11
+versions__queue=1.72
+versions__zlib=1.2.11
+versions__gcc=7.2.0
+versions__github_release=0.7.2
+
+sources__talloc="https://www.samba.org/ftp/talloc/talloc-${versions__talloc}.tar.gz"
+sources__queue="http://cvsweb.netbsd.org/bsdweb.cgi/~checkout~/src/sys/sys/queue.h?rev=${versions__queue}"
+sources__zlib="https://zlib.net/zlib-${versions__zlib}.tar.gz"
+sources__gcc="$MUSL_CROSS_MAKE_SRC/gcc-${versions__gcc}-${TARGET}.tar.xz"
+sources__github_release="https://github.com/aktau/github-release/releases/download/v${versions__github_release}/linux-amd64-github-release.tar.bz2"
+sources__gcc_manifest="${MUSL_CROSS_MAKE_SRC}/gcc-7.2.0-manifest.txt"
+
+files__talloc="$(basename ${sources__talloc})"
+files__queue="queue-${versions__queue}.h"
+files__zlib="$(basename ${sources__zlib})"
+files__gcc="$(basename ${sources__gcc})"
+files__gcc_manifest="$(basename ${sources__gcc_manifest})"
+files__github_release="$(basename ${sources__github_release})"
+
+
+THISDIR=$(pwd)
+DISTDIR=$(pwd)/dist
+DOWNLOADDIR=$(pwd)/downloads
+BUILDDIR=$(pwd)/builds/${TARGET}
+TOOLDIR=$(pwd)/tools
+LOGDIR=$(pwd)/logs
+
+mkdir -p $DISTDIR/bin
+mkdir -p $DOWNLOADDIR
+mkdir -p $BUILDDIR
+mkdir -p $TOOLDIR/bin
+mkdir -p $LOGDIR
+rm -f $LOGDIR/*${TARGET}*.txt
+
+download_package() {
+    package=$1
+
+    package_file="files__${package}"
+    package_file="${!package_file}"
+
+    package_source="sources__${package}"
+    package_source="${!package_source}"
+
+    if [[ ! -f "$DOWNLOADDIR/${package_file}" ]] ; then
+        printf "Downloading ${package_file}\n"
+        curl -s -R -L -o "$DOWNLOADDIR/${package_file}" \
+          "${package_source}"
+    fi
+}
+
+export PATH="$TOOLDIR/bin:$PATH"
+
+download_package "talloc"
+download_package "queue"
+download_package "zlib"
+download_package "gcc" "gcc cross-compiler"
+download_package "gcc_manifest" "gcc manifest"
+download_package "github_release" "github-release"
+
+while read -r line; do
+    key=$(printf "${line}" | cut -d"=" -f1)
+    value=$(printf "${line}" | cut -d"=" -f2)
+    case "${key}" in
+        musl|gcc) printf -v "versions__${key}" "%s" "$value" ;;
+    esac
+done < $DOWNLOADDIR/gcc-7.2.0-manifest.txt
+
+tar xf "$DOWNLOADDIR/gcc-7.2.0-${TARGET}.tar.xz" -C $TOOLDIR
+tar xf "$DOWNLOADDIR/${files__github_release}" -C $TOOLDIR/bin --strip-components=3
+
+cp $DOWNLOADDIR/queue-${versions__queue}.h $TOOLDIR/$TARGET/include/sys/queue.h
+
+printf "Building zlib\n"
+tar xf "$DOWNLOADDIR/zlib-${versions__zlib}.tar.gz" -C $BUILDDIR
+cd $BUILDDIR/zlib-${versions__zlib}
+
+CC="$TARGET-gcc" \
+CPP="$TARGET-cpp" \
+AR="$TARGET-ar" \
+RANLIB="$TARGET-ranlib" \
+./configure \
+  --prefix=$TOOLDIR/$TARGET
+make
+make install
+
+printf "Building talloc\n"
+
+tar xf "$DOWNLOADDIR/talloc-${versions__talloc}.tar.gz" -C $BUILDDIR
+cd $BUILDDIR/talloc-${versions__talloc}
+
+CC="$TARGET-gcc" \
+CPP="$TARGET-cpp" \
+AR="$TARGET-ar" \
+RANLIB="$TARGET-ranlib" \
+./configure \
+  --prefix=$TOOLDIR/$TARGET \
+  --cross-compile \
+  --cross-answers=$THISDIR/waf-answers/${TARGET}.answers \
+  --cross-execute=${TARGET}- \
+  --disable-python \
+  --hostcc=$HOSTCC \
+  --prefix=$TOOLDIR/${TARGET}
+make
+make install
+rm -f $TOOLDIR/$TARGET/lib/libtalloc.a
+${TARGET}-ar qf $TOOLDIR/$TARGET/lib/libtalloc.a bin/default/talloc_5.o
+
+rm -rf $BUILDDIR/proot
+mkdir -p $BUILDDIR/proot
+cp -r $THISDIR/src $BUILDDIR/proot/src
+cp -r $THISDIR/tests $BUILDDIR/proot/tests
+cp -r $THISDIR/doc $BUILDDIR/proot/doc
+cd $BUILDDIR/proot/src
+make CROSS_COMPILE="${TARGET}-" LDFLAGS="-s -static -ltalloc"
+
+cp $BUILDDIR/proot/src/proot $DISTDIR/bin/proot
+tar cJf $DISTDIR/proot-5.1.0-${TARGET}.tar.xz -C $DISTDIR bin
+
+printf 'Built using `musl-%s` and `talloc-%s`\n' "${versions__musl}" "${versions__talloc}" > $DISTDIR/release.md
