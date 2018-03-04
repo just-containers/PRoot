@@ -10,6 +10,11 @@ env:
   - TARGET=arm-linux-musleabi
   - TARGET=arm-linux-musleabihf
 
+install:
+  - openssl aes-256-cbc -K $OPENSSL_KEY -iv $OPENSSL_IV -in keys.tar.xz.enc -out keys.tar.xz -d
+  - tar xf keys.tar.xz
+  - gpg --import keys/public.key
+  - gpg --allow-secret-key-import --import keys/private.key
 
 script:
   - bash build ${TARGET}

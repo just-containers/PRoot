@@ -26,10 +26,17 @@ github-release release \
 # binaries
 for i in "$(pwd)/dist/"*.tar.xz; do
   name=$(basename ${i})
+  gpg -u 0x3B2FD161 --output "${i}.sig" --detach-sig "${i}"
   github-release upload \
     --user "${USERNAME}" \
     --repo "${REPONAME}" \
     --tag "${TRAVIS_TAG}" \
     --name "${name}" \
     --file "${i}"
+  github-release upload \
+    --user "${USERNAME}" \
+    --repo "${REPONAME}" \
+    --tag "${TRAVIS_TAG}" \
+    --name "${name}.sig" \
+    --file "${i}.sig"
 done

@@ -19,6 +19,12 @@ unset CC CXX LINK AR NM READELF RANLIB
 MUSL_CROSS_MAKE_RELEASE=8
 MUSL_CROSS_MAKE_SRC="https://github.com/just-containers/musl-cross-make/releases/download/v${MUSL_CROSS_MAKE_RELEASE}"
 
+arches__aarch64_linux_musl="aarch64"
+arches__i486_linux_musl="x86"
+arches__x86_64_linux_musl="amd64"
+arches__arm_linux_musleabi="arm"
+arches__arm_linux_musleabihf="armhf"
+
 versions__talloc=2.1.11
 versions__queue=1.72
 versions__zlib=1.2.11
@@ -39,6 +45,9 @@ files__gcc="$(basename ${sources__gcc})"
 files__gcc_manifest="$(basename ${sources__gcc_manifest})"
 files__github_release="$(basename ${sources__github_release})"
 
+TARGET_U="$(printf $TARGET | tr '-' '_')"
+TARGET_S="arches__${TARGET_U}"
+TARGET_S="${!TARGET_S}"
 
 THISDIR=$(pwd)
 DISTDIR=$(pwd)/dist
@@ -136,6 +145,6 @@ cd $BUILDDIR/proot/src
 make CROSS_COMPILE="${TARGET}-" LDFLAGS="-s -static -ltalloc"
 
 cp $BUILDDIR/proot/src/proot $DISTDIR/bin/proot
-tar cJf $DISTDIR/proot-5.1.0-${TARGET}.tar.xz -C $DISTDIR bin
+tar cJf $DISTDIR/proot-5.1.0-${TARGET_S}.tar.xz -C $DISTDIR bin
 
 printf 'Built using `musl-%s` and `talloc-%s`\n' "${versions__musl}" "${versions__talloc}" > $DISTDIR/release.md
