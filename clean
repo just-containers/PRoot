@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+rm -rf builds
+rm -rf dist
+rm -rf logs
+rm -rf downloads
+rm -rf tools
