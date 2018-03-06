@@ -72,7 +72,7 @@ typedef unsigned char byte_t;
 		{ .value = AUDIT_ARCH_I386,   .nb_abis = 1, .abis = { ABI_2 } }, 		\
 	}
 
-    #define HOST_ELF_MACHINE {62, 3, 6, 0}
+    #define HOST_ELF_MACHINE {62, 0}
     #define RED_ZONE_SIZE 128
     #define OFFSETOF_STAT_UID_32 24
     #define OFFSETOF_STAT_GID_32 28
