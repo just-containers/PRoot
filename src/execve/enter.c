@@ -376,75 +376,66 @@ static int expand_runner(Tracee* tracee, char host_path[PATH_MAX], char user_pat
 
 	/* No need to adjust argv[] if it's a host binary (a.k.a
 	 * mixed-mode).  */
-	if (!is_host_elf(tracee, host_path)) {
-		ArrayOfXPointers *argv;
-		size_t nb_qemu_args;
-		size_t i;
+	ArrayOfXPointers *argv;
+	size_t nb_qemu_args;
+	size_t i;
 
-		status = fetch_array_of_xpointers(tracee, &argv, SYSARG_2, 0);
-		if (status < 0)
-			return status;
-
-		status = read_xpointee_as_string(argv, 0, &argv0);
-		if (status < 0)
-			return status;
-
-		/* Assuming PRoot was invoked this way:
-		 *
-		 *     proot -q 'qemu-arm -cpu cortex-a9' ...
-		 *
-		 * a call to:
-		 *
-		 *     execve("/bin/true", { "true", NULL }, ...)
-		 *
-		 * becomes:
-		 *
-		 *     execve("/usr/bin/qemu",
-		 *           { "qemu", "-cpu", "cortex-a9", "-0", "true", "/bin/true", NULL }, ...)
-		 */
-
-		nb_qemu_args = talloc_array_length(tracee->qemu) - 1;
-		status = resize_array_of_xpointers(argv, 1, nb_qemu_args + 2);
-		if (status < 0)
-			return status;
-
-		for (i = 0; i < nb_qemu_args; i++) {
-			status = write_xpointee(argv, i, tracee->qemu[i]);
-			if (status < 0)
-				return status;
-		}
-
-		status = write_xpointees(argv, i, 3, "-0", argv0, user_path);
-		if (status < 0)
-			return status;
-
-		/* Ensure LD_ features should not be applied to QEMU
-		 * iteself.  */
-		status = ldso_env_passthru(tracee, envp, argv, "-E", "-U", i);
-		if (status < 0)
-			return status;
-
-		status = push_array_of_xpointers(argv, SYSARG_2);
-		if (status < 0)
-			return status;
-
-		/* Launch the runner in lieu of the initial
-		 * program. */
-		assert(strlen(tracee->qemu[0]) + strlen(HOST_ROOTFS) < PATH_MAX);
-		assert(tracee->qemu[0][0] == '/');
-
-		strcpy(host_path, tracee->qemu[0]);
-
-		strcpy(user_path, HOST_ROOTFS);
-		strcat(user_path, host_path);
-	}
-
-	/* Provide information to the host dynamic linker to find host
-	 * libraries (remember the guest root file-system contains
-	 * libraries for the guest architecture only).  */
-	status = rebuild_host_ldso_paths(tracee, host_path, envp);
+	status = fetch_array_of_xpointers(tracee, &argv, SYSARG_2, 0);
 	if (status < 0)
 		return status;
+
+	status = read_xpointee_as_string(argv, 0, &argv0);
+	if (status < 0)
+		return status;
+
+	/* Assuming PRoot was invoked this way:
+	 *
+	 *     proot -q 'qemu-arm -cpu cortex-a9' ...
+	 *
+	 * a call to:
+	 *
+	 *     execve("/bin/true", { "true", NULL }, ...)
+	 *
+	 * becomes:
+	 *
+	 *     execve("/usr/bin/qemu",
+	 *           { "qemu", "-cpu", "cortex-a9", "-0", "true", "/bin/true", NULL }, ...)
+	 */
+
+	nb_qemu_args = talloc_array_length(tracee->qemu) - 1;
+	status = resize_array_of_xpointers(argv, 1, nb_qemu_args + 2);
+	if (status < 0)
+		return status;
+
+	for (i = 0; i < nb_qemu_args; i++) {
+		status = write_xpointee(argv, i, tracee->qemu[i]);
+		if (status < 0)
+			return status;
+	}
+
+	status = write_xpointees(argv, i, 3, "-0", argv0, user_path);
+	if (status < 0)
+		return status;
+
+	/* Ensure LD_ features should not be applied to QEMU
+	 * iteself.  */
+	status = ldso_env_passthru(tracee, envp, argv, "-E", "-U", i);
+	if (status < 0)
+		return status;
+
+	status = push_array_of_xpointers(argv, SYSARG_2);
+	if (status < 0)
+		return status;
+
+	/* Launch the runner in lieu of the initial
+	 * program. */
+	assert(strlen(tracee->qemu[0]) + strlen(HOST_ROOTFS) < PATH_MAX);
+	assert(tracee->qemu[0][0] == '/');
+
+	strcpy(host_path, tracee->qemu[0]);
+
+	strcpy(user_path, HOST_ROOTFS);
+	strcat(user_path, host_path);
 
 	status = push_array_of_xpointers(envp, SYSARG_3);
 	if (status < 0)
